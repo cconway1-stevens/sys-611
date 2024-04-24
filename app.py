@@ -3,8 +3,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
-import plotly.express as px
-import plotly.graph_objects as go
 
 # Constants
 NUM_SIMULATIONS = 1000
@@ -14,7 +12,34 @@ CONFIDENCE_LEVEL = 0.95
 st.set_page_config(layout="wide")
 
 # Initialize the random generator
-rng = np.random.default_rng()
+rng = np.random.default_rng(42)
+
+# Function that works similarly to the Excel model
+def excel_like_simulation(detection_size_avg, wind_speed_avg, response_time_avg, num_simulations):
+    fire_sizes_acres = []
+    for _ in range(num_simulations):
+        detection_size = abs(np.random.normal(detection_size_avg, 0.5))
+        wind_speed = np.random.normal(wind_speed_avg, 0.622)
+        response_time = np.random.normal(response_time_avg, 10)
+        
+        # Convert detection size from acres to square meters
+        detection_size_m2 = detection_size * 4046.86
+        
+        # Calculate the radius of the fire detection area
+        detection_radius_m = np.sqrt(detection_size_m2 / np.pi)
+        
+        # Estimate fire spread and suppression effectiveness
+        fire_spread_rate = wind_speed * 0.05
+        fire_suppression_rate = detection_radius_m * 1.005
+        
+        # Calculate the final size of the fire
+        burn_time_hrs = response_time / 3600
+        final_radius_m = detection_radius_m + (fire_spread_rate * burn_time_hrs) - fire_suppression_rate
+        final_size_acres = (final_radius_m**2 * np.pi) / 4046.86
+        
+        fire_sizes_acres.append(final_size_acres)
+        
+    return np.mean(fire_sizes_acres), np.std(fire_sizes_acres), fire_sizes_acres
 
 # Function to simulate fire
 def simulate_fire(num_simulations, detection_size_input, wind_speed_input, response_time_input):
@@ -60,78 +85,6 @@ def simulate_fire(num_simulations, detection_size_input, wind_speed_input, respo
         })
 
     return pd.DataFrame(results), fire_sizes
-
-# Function to visualize fire in real-time using 3D shapes
-def visualize_fire(results_df):
-    fig = go.Figure()
-
-    # Add initial fire position
-    fig.add_trace(
-        go.Scatter3d(
-            x=[0],
-            y=[0],
-            z=[0],
-            mode="markers",
-            marker=dict(size=10, color="red"),
-            name="Fire"
-        )
-    )
-
-    # Define update function
-    def update_fire(i):
-        x = [0]  # x-coordinate of the fire remains constant
-        y = [0]  # y-coordinate of the fire remains constant
-        z = [i]  # z-coordinate represents the height of the fire
-        fig.data[0].x = x
-        fig.data[0].y = y
-        fig.data[0].z = z
-
-    # Update layout
-    fig.update_layout(
-        scene=dict(
-            xaxis=dict(title="X"),
-            yaxis=dict(title="Y"),
-            zaxis=dict(title="Height"),
-        ),
-        title="Real-time Fire Visualization",
-    )
-
-    # Add animation
-    frames = [go.Frame(data=[go.Scatter3d(x=[0], y=[0], z=[i], mode="markers", marker=dict(size=10, color="red"))], name=str(i)) for i in range(100)]
-    fig.frames = frames
-    sliders = [dict(steps=[dict(method="animate", args=[[str(i)], dict(frame=dict(duration=200, redraw=True), fromcurrent=True)], label=str(i)) for i in range(100)])]
-    fig.update(frames=frames)
-    fig.update_layout(sliders=sliders)
-
-    return fig
-
-def visualize_fire2(results_df):
-    fig = go.Figure()
-
-    # Creating a 3D scatter plot for fire simulation over time
-    for index, row in results_df.iterrows():
-        fig.add_trace(
-            go.Scatter3d(
-                x=[index],  # Index or time of the simulation step
-                y=[row['Final Radius (m)']],  # Radius showing the spread
-                z=[row['Burn Time (sec)']],  # Time as the height dimension
-                mode="markers",
-                marker=dict(size=row['Final Size (m^2)'] / 1000, color="red"),
-                name=f"Time {index}"
-            )
-        )
-
-    # Update layout to accommodate dynamic changes
-    fig.update_layout(
-        scene=dict(
-            xaxis=dict(title="Simulation Step"),
-            yaxis=dict(title="Fire Radius (m)"),
-            zaxis=dict(title="Burn Time (sec)"),
-        ),
-        title="3D Visualization of Fire Spread Over Time"
-    )
-
-    return fig
 
 # Main function
 def main():
