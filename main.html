@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulation Input</title>
+</head>
+<body>
+    <h1>Enter Simulation Parameters</h1>
+    <form id="simulationForm">
+        <label for="minCustomers">Minimum Customers:</label>
+        <input type="number" id="minCustomers" name="minCustomers" value="200"><br><br>
+
+        <label for="maxCustomers">Maximum Customers:</label>
+        <input type="number" id="maxCustomers" name="maxCustomers" value="1000"><br><br>
+
+        <label for="minPrice">Minimum Checkout Price:</label>
+        <input type="number" id="minPrice" name="minPrice" value="50"><br><br>
+
+        <label for="maxPrice">Maximum Checkout Price:</label>
+        <input type="number" id="maxPrice" name="maxPrice" value="250"><br><br>
+
+        <button type="button" onclick="submitSimulation()">Run Simulation</button>
+    </form>
+
+    <script>
+        function submitSimulation() {
+            const formData = {
+                minCustomers: document.getElementById('minCustomers').value,
+                maxCustomers: document.getElementById('maxCustomers').value,
+                minPrice: document.getElementById('minPrice').value,
+                maxPrice: document.getElementById('maxPrice').value
+            };
+
+            fetch('http://localhost:8000/run-simulation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                alert("Simulation complete! Check console for details.");
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>
